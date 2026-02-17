@@ -1,0 +1,100 @@
+       'use client';
+
+import Navigation from '@/components/Navigation';
+import AssetGenerator from '@/components/AssetGenerator';
+import { useParams } from 'next/navigation';
+import { api } from '@/lib/api';
+import { useProjectStore } from '@/lib/store';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+
+export default function ProjectPage() {
+  const params = useParams();
+  const projectId = params.projectId as string;
+  const { currentProject, setCurrentProject } = useProjectStore();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProject = async () => {
+      try {
+        const response = await api.getProject(projectId);
+        setCurrentProject(response.data.project);
+      } catch (error: any) {
+        toast.error('Failed to load project');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProject();
+  }, [projectId, setCurrentProject]);
+
+  if (isLoading) {
+    return (
+      <>
+        <Navigation />
+        <main className="min-h-screen bg-gray-50 py-12 px-4">
+          <div className="text-center">Loading project...</div>
+        </main>
+      </>
+    );
+  }
+
+  if (!currentProject) {
+    return (
+      <>
+        <Navigation />
+        <main className="min-h-screen bg-gray-50 py-12 px-4">
+          <div className="text-center">Project not found</div>
+        </main>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Navigation />
+      <main className="min-h-screen bg-gray-50 py-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          {/* Project Header */}
+          <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">{currentProject.projectName}</h1>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Business Type</p>
+                <p className="font-semibold text-gray-900">{currentProject.businessType}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Industry</p>
+                <p className="font-semibold text-gray-900">{currentProject.industry}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Tone</p>
+                <p className="font-semibold text-gray-900 capitalize">{currentProject.tone}</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-sm text-gray-600">Keywords</p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {currentProject.keywords.map((keyword: string, idx: number) => (
+                  <span key={idx} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Asset Generators */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <AssetGenerator projectId={projectId} assetType="brand-names" label="Brand Names" />
+            <AssetGenerator projectId={projectId} assetType="color-palette" label="Color Palette" />
+            <AssetGenerator projectId={projectId} assetType="landing-page" label="Landing Page Content" />
+            
+            {/* Add more generators as needed */}
+          </div>
+        </div>
+      </main>
+    </>
+  );
+}

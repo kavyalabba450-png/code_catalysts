@@ -1,0 +1,109 @@
+const express = require("express");
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const cors = require("cors");
+
+dotenv.config();
+const app = express();
+
+app.use(express.json());
+app.use(cors());
+
+// Routes
+app.use("/api/brand", require("./routes/brandRoutes"));
+
+// DB Connection
+mongoose.connect(process.env.MONGO_URI)
+.then(() => console.log("MongoDB Connected"))
+.catch(err => console.log(err));
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`)
+);
+const mongoose = require("mongoose");
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("MongoDB Connected");
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+};
+
+module.exports = connectDB;
+const mongoose = require("mongoose");
+
+const brandSchema = new mongoose.Schema({
+  businessName: {
+    type: String,
+    required: true
+  },
+  industry: String,
+  targetAudience: String,
+  brandName: String,
+  tagline: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+module.exports = mongoose.model("Brand", brandSchema);
+const Brand = require("../models/Brand");
+const OpenAI = require("openai");
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+exports.generateBrand = async (req, res) => {
+  try {
+    const { businessName, industry, targetAudience } = req.body;
+
+    const prompt = `
+    Generate a creative brand name and catchy tagline for:
+    Business: ${businessName}
+    Industry: ${industry}
+    Target Audience: ${targetAudience}
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const output = response.choices[0].message.content;
+
+    // Simple parsing
+    const [brandName, tagline] = output.split("\n");
+
+    const newBrand = await Brand.create({
+      businessName,
+      industry,
+      targetAudience,
+      brandName,
+      tagline
+    });
+
+    res.status(200).json(newBrand);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Brand generation failed" });
+  }
+};
+const express = require("express");
+const router = express.Router();
+const { generateBrand } = require("../controllers/brandController");
+
+router.post("/generate", generateBrand);
+
+module.exports = router;
+{
+  "businessName": "Organic Juice Startup",
+  "industry": "Food & Beverage",
+  "targetAudience": "Health conscious millennials"
+}
+
